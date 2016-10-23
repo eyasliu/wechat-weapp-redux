@@ -19,7 +19,7 @@ function connect(mapStateToProps, mapDispatchToProps) {
     mapDispatch = wrapActionCreators(mapDispatchToProps)
   }
 
-  return function wrapWithConnect(pageConfig) {
+  return function wrapWithConnect(pageComponent) {
 
     function handleChange(options) {
       if (!this.unsubscribe) {
@@ -43,13 +43,30 @@ function connect(mapStateToProps, mapDispatchToProps) {
         this.unsubscribe = this.store.subscribe(handleChange.bind(this, options))
         handleChange.apply(this)
       }
+      // pageComponent.prototype.onLoad.call(options)
     }
 
     function onUnload() {
       typeof this.unsubscribe === 'function' && this.unsubscribe()
     }
 
-    return Object.assign({}, pageConfig, mapDispatch(app.store.dispatch), {onLoad, onUnload})
+    function injectMethod(fun, options){
+      return function(...args) {
+        options.before && options.before.apply(this, args)
+        const result = fun && fun.apply(this, args)
+        options.after && options.after.apply(this, args)
+        return result;
+      }
+    }
+    
+    pageComponent.prototype.onLoad = injectMethod(pageComponent.prototype.onLoad, {
+      before(args){onLoad.apply(this, args)}
+    })
+    pageComponent.prototype.onUnload = injectMethod(pageComponent.prototype.onUnload, {
+      before(args){onUnload.apply(this, args)}
+    })
+
+    return pageComponent
   }
 }
 

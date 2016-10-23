@@ -13,8 +13,9 @@ function checkStoreShape(store) {
 
 function Provider(store) {
   checkStoreShape(store)
-  return function(appConfig) {
-    return Object.assign({}, appConfig, {store})
+  return function(App) {
+    App.prototype.store = store
+    return App
   }
 }
 
