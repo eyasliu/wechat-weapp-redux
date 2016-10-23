@@ -1,5 +1,5 @@
 (function webpackUniversalModuleDefinition(root, factory) {
-	if(typeof module === 'object')
+	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
 	else if(typeof define === 'function' && define.amd)
 		define([], factory);
@@ -125,8 +125,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	function Provider(store) {
 	  checkStoreShape(store);
-	  return function (appConfig) {
-	    return Object.assign({}, appConfig, { store: store });
+	  return function (App) {
+	    App.prototype.store = store;
+	    return App;
 	  };
 	}
 
@@ -173,7 +174,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    mapDispatch = (0, _wrapActionCreators2.default)(mapDispatchToProps);
 	  }
 
-	  return function wrapWithConnect(pageConfig) {
+	  return function wrapWithConnect(pageComponent) {
 
 	    function handleChange(options) {
 	      if (!this.unsubscribe) {
@@ -197,13 +198,38 @@ return /******/ (function(modules) { // webpackBootstrap
 	        this.unsubscribe = this.store.subscribe(handleChange.bind(this, options));
 	        handleChange.apply(this);
 	      }
+	      // pageComponent.prototype.onLoad.call(options)
 	    }
 
 	    function onUnload() {
 	      typeof this.unsubscribe === 'function' && this.unsubscribe();
 	    }
 
-	    return Object.assign({}, pageConfig, mapDispatch(app.store.dispatch), { onLoad: onLoad, onUnload: onUnload });
+	    function injectMethod(fun, options) {
+	      return function () {
+	        for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+	          args[_key] = arguments[_key];
+	        }
+
+	        options.before && options.before.apply(this, args);
+	        var result = fun && fun.apply(this, args);
+	        options.after && options.after.apply(this, args);
+	        return result;
+	      };
+	    }
+
+	    pageComponent.prototype.onLoad = injectMethod(pageComponent.prototype.onLoad, {
+	      before: function before(args) {
+	        onLoad.apply(this, args);
+	      }
+	    });
+	    pageComponent.prototype.onUnload = injectMethod(pageComponent.prototype.onUnload, {
+	      before: function before(args) {
+	        onUnload.apply(this, args);
+	      }
+	    });
+
+	    return pageComponent;
 	  };
 	}
 
